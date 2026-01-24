@@ -22,3 +22,6 @@ logs/
 
 # UV lock file
 uv.lock
+
+# Agent
+.agent
