@@ -3,6 +3,8 @@ import uvicorn
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 # Import local modules
 from src.agent import recipe_agent
@@ -38,6 +40,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+@app.get("/")
+async def read_index():
+    """Serve the index.html file"""
+    return FileResponse("static/index.html")
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -120,10 +131,4 @@ async def demo_extraction() -> RecipeExtractionResponse:
 
 
 if __name__ == "__main__":
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-        log_level="info",
-    )
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True, log_config=None)
