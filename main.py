@@ -46,7 +46,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 @app.get("/")
-async def read_index():
+async def root():
     """Serve the index.html file"""
     return FileResponse("static/index.html")
 
@@ -98,34 +98,6 @@ async def extract_recipe(request: RecipeExtractionRequest) -> RecipeExtractionRe
                     "video_url": str(request.video_url),
                     "original_error": str(e),
                 },
-            ).model_dump(),
-        )
-
-
-@app.get("/extract/demo")
-async def demo_extraction() -> RecipeExtractionResponse:
-    """
-    Demo endpoint with a sample video URL
-    """
-    demo_url = "https://www.tiktok.com/@khanhong/video/7557275818255273234"
-
-    try:
-        start_time = time.time()
-        result = recipe_agent(video_url=demo_url, max_retries=2)
-        processing_time = time.time() - start_time
-
-        return RecipeExtractionResponse(
-            success=result["success"],
-            recipe=result["recipe"],
-            metadata=result["metadata"],
-            processing_time=processing_time,
-        )
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=ErrorResponse(
-                error="Demo extraction failed", details={"original_error": str(e)}
             ).model_dump(),
         )
 
