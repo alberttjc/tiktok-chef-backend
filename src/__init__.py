@@ -1,5 +1,5 @@
 """
-Recipe Extraction Application
+TiktokChef Application
 
 A LangGraph-based application for extracting structured recipes from cooking videos.
 """

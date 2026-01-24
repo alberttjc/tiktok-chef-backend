@@ -1,4 +1,4 @@
-# Recipe Extraction API
+# TiktokChef API
 
 A FastAPI application that extracts structured recipes from cooking videos using AI and LangGraph.
 
@@ -49,7 +49,7 @@ The API will be available at `http://localhost:8000`
 - `GET /` - Basic health status
 - `GET /health` - Detailed health information
 
-### Recipe Extraction
+### TiktokChef API
 
 - `POST /extract` - Extract recipe from video URL
 - `GET /extract/demo` - Demo extraction with sample video
@@ -127,7 +127,7 @@ uv run python test_api.py
 recipe-app/
 ├── main.py              # FastAPI application
 ├── src/
-│   ├── agent.py        # Recipe extraction agent
+│   ├── agent.py        # TiktokChef agent
 │   ├── config.py       # Configuration and prompts
 │   ├── graph.py        # LangGraph workflow
 │   ├── schema.py       # Pydantic models

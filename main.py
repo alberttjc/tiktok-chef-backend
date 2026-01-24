@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 # Import local modules
+from src.logger import get_logger
 from src.agent import recipe_agent
 from src.schema import (
     RecipeExtractionRequest,
@@ -16,17 +17,21 @@ from src.schema import (
 )
 
 
+# Initialize logger
+logger = get_logger(__name__)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifecycle"""
-    print("Starting Recipe Extraction API...")
+    logger.info("Starting TiktokChef API...")
     yield
-    print("Shutting down Recipe Extraction API...")
+    logger.info("Shutting down TiktokChef API...")
 
 
 # Create FastAPI app
 app = FastAPI(
-    title="Recipe Extraction API",
+    title="TiktokChef API",
     description="Extract structured recipes from cooking videos using AI",
     version="0.1.0",
     lifespan=lifespan,
@@ -86,8 +91,8 @@ async def extract_recipe(request: RecipeExtractionRequest) -> RecipeExtractionRe
     except Exception as e:
         processing_time = time.time() - start_time
 
-        # Log the error (in production, you'd use proper logging)
-        print(f"Error extracting recipe: {str(e)}")
+        # Log the error
+        logger.error(f"Error extracting recipe for URL {request.video_url}: {str(e)}")
 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -103,4 +108,4 @@ async def extract_recipe(request: RecipeExtractionRequest) -> RecipeExtractionRe
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True, log_config=None)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True, log_config=None)

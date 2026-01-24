@@ -7,8 +7,12 @@ from pydantic import ValidationError
 from langchain_core.tools import tool
 
 # import local modules
+from src.logger import get_logger
 from src.schema import Recipe
 from src.config import RECIPE_URL_PROMPT, GEMINI_MODEL
+
+# Initialize logger
+logger = get_logger(__name__)
 
 
 # load environment variables
@@ -24,7 +28,7 @@ def transcribe_recipe(video_url: str) -> Recipe:
     """
     Extract structured recipe data using Gemini + Pydantic
     """
-
+    logger.info(f"Calling Gemini API for URL: {video_url}")
     response = client.models.generate_content(
         model=GEMINI_MODEL,
         contents=RECIPE_URL_PROMPT.format(video_url=video_url),
@@ -41,12 +45,15 @@ def transcribe_recipe(video_url: str) -> Recipe:
     try:
         data = json.loads(response.text)
         recipe = Recipe.model_validate(data)
+        logger.info("Successfully parsed and validated recipe from Gemini response")
         return recipe
 
     except json.JSONDecodeError as e:
+        logger.error(f"Gemini returned invalid JSON: {str(e)}")
         raise RuntimeError("Gemini returned invalid JSON") from e
 
     except ValidationError as e:
+        logger.error(f"Response did not match recipe schema: {str(e)}")
         raise RuntimeError("Response did not match recipe schema") from e
 
 

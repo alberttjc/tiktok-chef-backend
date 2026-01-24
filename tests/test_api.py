@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test script for the Recipe Extraction API
+Test script for the TiktokChef API
 """
 
 import sys
@@ -16,7 +16,7 @@ def test_api():
     """Test the FastAPI endpoints"""
     client = TestClient(app)
 
-    print("Testing Recipe Extraction API...")
+    print("Testing TiktokChef API...")
     print("=" * 50)
 
     # Test health endpoint
@@ -37,8 +37,8 @@ def test_api():
         print(f"   Endpoints: {len(openapi_data.get('paths', {}))}")
     print()
 
-    # Test recipe extraction endpoint (with invalid URL to test validation)
-    print("4. Testing recipe extraction endpoint validation...")
+    # Test TiktokChef endpoint (with invalid URL to test validation)
+    print("4. Testing TiktokChef endpoint validation...")
     try:
         response = client.post(
             "/extract", json={"video_url": "invalid-url", "max_retries": 2}
