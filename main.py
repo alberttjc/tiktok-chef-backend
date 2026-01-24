@@ -108,4 +108,5 @@ async def extract_recipe(request: RecipeExtractionRequest) -> RecipeExtractionRe
 
 
 if __name__ == "__main__":
+    # demo_url = "https://www.tiktok.com/@khanhong/video/7557275818255273234"
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True, log_config=None)
