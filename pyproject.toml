@@ -1,0 +1,15 @@
+[project]
+name = "recipe-app"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.128.0",
+    "uvicorn[standard]>=0.30.0",
+    "google-genai>=1.57.0",
+    "langchain-google-genai>=4.2.0",
+    "langgraph>=1.0.6",
+    "pydantic>=2.12.5",
+    "python-dotenv>=1.2.1",
+]
