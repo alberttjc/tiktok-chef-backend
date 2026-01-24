@@ -1,10 +1,10 @@
 import time
+import uvicorn
 from contextlib import asynccontextmanager
-from typing import Dict, Any
-
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 
+# Import local modules
 from src.agent import recipe_agent
 from src.schema import (
     RecipeExtractionRequest,
@@ -40,12 +40,6 @@ app.add_middleware(
 )
 
 
-@app.get("/", response_model=HealthResponse)
-async def root():
-    """Root endpoint with API health status"""
-    return HealthResponse()
-
-
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint"""
@@ -56,34 +50,34 @@ async def health_check():
 async def extract_recipe(request: RecipeExtractionRequest) -> RecipeExtractionResponse:
     """
     Extract recipe from a cooking video URL
-    
+
     - **video_url**: URL of the cooking video to analyze
     - **max_retries**: Maximum number of retry attempts (0-5)
     """
     start_time = time.time()
-    
+
     try:
         # Extract recipe using the agent
         result = recipe_agent(
             video_url=str(request.video_url),
             max_retries=request.max_retries,
         )
-        
+
         processing_time = time.time() - start_time
-        
+
         return RecipeExtractionResponse(
             success=result["success"],
             recipe=result["recipe"],
             metadata=result["metadata"],
             processing_time=processing_time,
         )
-        
+
     except Exception as e:
         processing_time = time.time() - start_time
-        
+
         # Log the error (in production, you'd use proper logging)
         print(f"Error extracting recipe: {str(e)}")
-        
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ErrorResponse(
@@ -92,8 +86,8 @@ async def extract_recipe(request: RecipeExtractionRequest) -> RecipeExtractionRe
                     "processing_time": processing_time,
                     "video_url": str(request.video_url),
                     "original_error": str(e),
-                }
-            ).model_dump()
+                },
+            ).model_dump(),
         )
 
 
@@ -103,30 +97,29 @@ async def demo_extraction() -> RecipeExtractionResponse:
     Demo endpoint with a sample video URL
     """
     demo_url = "https://www.tiktok.com/@khanhong/video/7557275818255273234"
-    
+
     try:
+        start_time = time.time()
         result = recipe_agent(video_url=demo_url, max_retries=2)
-        
+        processing_time = time.time() - start_time
+
         return RecipeExtractionResponse(
             success=result["success"],
             recipe=result["recipe"],
             metadata=result["metadata"],
-            processing_time=None,
+            processing_time=processing_time,
         )
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ErrorResponse(
-                error="Demo extraction failed",
-                details={"original_error": str(e)}
-            ).model_dump()
+                error="Demo extraction failed", details={"original_error": str(e)}
+            ).model_dump(),
         )
 
 
 if __name__ == "__main__":
-    import uvicorn
-    
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
