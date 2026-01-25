@@ -10,16 +10,40 @@ A FastAPI application that extracts structured recipes from cooking videos using
 - ✅ Recipe validation and error handling
 - 🚀 RESTful API with OpenAPI documentation
 
-## Quick Start
+## System Architecture
 
-### Installation
+```mermaid
+graph LR
+    START --> video_analysis
+    video_analysis --> END
+```
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.12+
+- Google Gemini API key
+
+### 1. Install `uv` (Package Manager)
+
+**macOS/Linux:**
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+**Windows:**
+
+```powershell
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+### 2. Installation
 
 ```bash
 # Install dependencies
 uv sync
-
-# Or with pip
-pip install -r requirements.txt
 ```
 
 ### Setup Environment
@@ -118,7 +142,7 @@ curl "http://localhost:8000/extract/demo"
 
 ```bash
 # Test the API endpoints
-uv run python test_api.py
+uv run python tests/test_api.py
 ```
 
 ### Project Structure
@@ -132,7 +156,8 @@ recipe-app/
 │   ├── graph.py        # LangGraph workflow
 │   ├── schema.py       # Pydantic models
 │   └── tools.py        # AI tools and functions
-├── test_api.py         # API test script
+├── tests/
+│   └── test_api.py     # API test script
 └── README.md           # This file
 ```
 
