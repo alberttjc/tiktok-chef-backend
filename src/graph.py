@@ -4,7 +4,7 @@ from langchain_core.messages import AIMessage
 # import local modules
 from src.logger import get_logger
 from src.schema import AgentState, STATUS
-from src.tools import extract_recipe_from_url, validate_recipe_structure
+from src.tools import extract_recipe_from_url
 
 # Initialize logger
 logger = get_logger(__name__)
@@ -22,7 +22,7 @@ def url_extract_node(state: AgentState) -> AgentState:
         logger.info("Extraction successful")
         return state.model_copy(
             update={
-                "extraction_status": STATUS.RUNNING,
+                "extraction_status": STATUS.SUCCESS,
                 "extracted_recipe": extraction_result["recipe"],
                 "messages": [AIMessage(content="Recipe extracted successfully")],
             }
@@ -43,43 +43,10 @@ def url_extract_node(state: AgentState) -> AgentState:
         )
 
 
-def validation_node(state: AgentState) -> AgentState:
-    """Node for validating recipe"""
-    logger.info("Validating extracted recipe")
-    recipe_data = state.extracted_recipe
-
-    if not recipe_data:
-        logger.warning("No recipe data to validate")
-        return state.model_copy(
-            update={
-                "extraction_status": STATUS.FAILED,
-                "error_message": "No recipe data to validate",
-                "is_valid_recipe": False,
-                "messages": [AIMessage(content="No recipe data to validate")],
-            }
-        )
-
-    # Validate recipe
-    validation_result = validate_recipe_structure.invoke({"recipe_data": recipe_data})
-
-    if validation_result["is_valid"]:
-        logger.info("Recipe validation successful")
-    else:
-        logger.warning(f"Recipe validation failed: {validation_result['error']}")
-
-    return state.model_copy(
-        update={
-            "extraction_status": STATUS.SUCCESS,
-            "is_valid_recipe": validation_result["is_valid"],
-            "validation_errors": validation_result["error"],
-            "messages": [AIMessage(content="Recipe validated successfully")],
-        }
-    )
-
-
 # ***************************
 # Graph Routing Logic
 # ***************************
+# DO NOT DELETE FOR NOW
 def route_after_extraction(state: AgentState):
     if state.extraction_status == STATUS.RUNNING:
         return "recipe_validation"
@@ -101,11 +68,9 @@ def create_agent_graph() -> StateGraph:
 
     # Add nodes
     workflow.add_node("video_analysis", url_extract_node)
-    workflow.add_node("recipe_validation", validation_node)
 
     # Add edges
     workflow.add_edge(START, "video_analysis")
-    workflow.add_conditional_edges("video_analysis", route_after_extraction)
-    workflow.add_conditional_edges("recipe_validation", route_after_validation)
+    workflow.add_edge("video_analysis", END)
 
     return workflow.compile()

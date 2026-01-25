@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 # Import local modules
+from src.config import APP_VERSION
 from src.logger import get_logger
 from src.agent import recipe_agent
 from src.schema import (
@@ -33,7 +34,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="TiktokChef API",
     description="Extract structured recipes from cooking videos using AI",
-    version="0.1.0",
+    version=APP_VERSION,
     lifespan=lifespan,
 )
 

@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field, HttpUrl
 from typing import Annotated, Sequence, Optional, Literal, List, Any, Dict
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
+from src.config import APP_VERSION
 
 
 # ***************************
@@ -64,10 +65,6 @@ class AgentState(BaseModel):
     number_of_steps: int = Field(default=0, ge=0)
     processing_time: Optional[float] = 0
 
-    # Validation state
-    validation_errors: Optional[list] = Field(default=None)
-    is_valid_recipe: bool = False
-
 
 # ***************************
 # API Request/Response Models
@@ -102,4 +99,4 @@ class ErrorResponse(BaseModel):
 
 class HealthResponse(BaseModel):
     status: str = Field(default="healthy", description="API health status")
-    version: str = Field(default="0.1.0", description="API version")
+    version: str = Field(default=APP_VERSION, description="API version")

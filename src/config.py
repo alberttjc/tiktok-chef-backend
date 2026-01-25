@@ -1,3 +1,5 @@
+APP_VERSION = "0.1.0"
+
 GEMINI_MODEL = "gemini-2.5-flash"
 
 RECIPE_URL_PROMPT = """

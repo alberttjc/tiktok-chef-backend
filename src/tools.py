@@ -79,24 +79,3 @@ def extract_recipe_from_url(video_url: str) -> dict:
             "recipe": None,
             "error": str(e),
         }
-
-
-@tool
-def validate_recipe_structure(recipe_data: Recipe) -> dict:
-    """
-    Validate recipe data aginst Recipe schema
-    """
-    try:
-        recipe = Recipe.model_validate(recipe_data)
-        return {
-            "is_valid": True,
-            "recipe": recipe,
-            "error": None,
-        }
-
-    except Exception as e:
-        return {
-            "is_valid": False,
-            "recipe": None,
-            "error": str(e),
-        }
