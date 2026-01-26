@@ -10,7 +10,7 @@ RUN pip install uv && uv --version
 # Copy all project files and directories
 COPY . .
 # Install python dependencies
-RUN uv sync --frozen
+RUN uv sync
 
 # Expose port
 EXPOSE 8000
