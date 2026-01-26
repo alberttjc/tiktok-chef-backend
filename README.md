@@ -161,6 +161,13 @@ recipe-app/
 └── README.md           # This file
 ```
 
-## License
+## 🐳 Docker Workflow
 
-MIT License
+For production or containerized environments:
+
+| Action    | Command                                     |
+| --------- | ------------------------------------------- |
+| **Build** | `docker build -t tiktokchef .`              |
+| **Run**   | `docker run -p 8000:8000 tiktokchef`        |
+| **Test**  | `curl http://localhost:8000`                |
+| **Clean** | `docker stop <id> && docker rmi tiktokchef` |
