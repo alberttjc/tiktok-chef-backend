@@ -36,14 +36,6 @@ images:
 options:
   substitutionOption: ALLOW_LOOSE
   logging: CLOUD_LOGGING_ONLY
-substitutions:
-  _DEPLOY_REGION: australia-southeast2
-  _AR_HOSTNAME: australia-southeast2-docker.pkg.dev
-  _AR_PROJECT_ID: genai-toolbox-465313
-  _AR_REPOSITORY: tiktok-chef
-  _SERVICE_NAME: tiktok-chef-backend
-  _TRIGGER_ID: a3235169-bda4-42c2-9951-4566cee6a63c
 tags:
   - gcp-cloud-build-deploy-cloud-run
-  - gcp-cloud-build-deploy-cloud-run-managed
   - tiktok-chef
