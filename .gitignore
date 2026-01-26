@@ -25,3 +25,8 @@ uv.lock
 
 # Agent
 .agent
+
+# Database
+*.db
+*.sqlite
+*.sqlite3

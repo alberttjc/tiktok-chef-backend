@@ -20,6 +20,7 @@ class STATUS(str, Enum):
 # Recipe Data Schema
 # ***************************
 class RecipeOverview(BaseModel):
+    id: Optional[int] = None
     title: str
     prep_time: Optional[str] = None
     cook_time: Optional[str] = None
@@ -36,6 +37,7 @@ class Ingredient(BaseModel):
 
 
 class Recipe(BaseModel):
+    id: Optional[int] = None
     recipe_overview: RecipeOverview
     ingredients: List[Ingredient]
     instructions: List[str]
@@ -100,3 +102,48 @@ class ErrorResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str = Field(default="healthy", description="API health status")
     version: str = Field(default=APP_VERSION, description="API version")
+
+
+# ***************************
+# Database API Models
+# ***************************
+class SaveRecipeRequest(BaseModel):
+    recipe: Recipe = Field(..., description="Recipe data to save")
+    source_url: Optional[HttpUrl] = Field(None, description="Original video URL")
+
+
+class SaveRecipeResponse(BaseModel):
+    success: bool = Field(..., description="Whether the recipe was saved successfully")
+    recipe_id: int = Field(..., description="ID of the saved recipe")
+    message: str = Field(..., description="Success message")
+
+
+class GetRecipesResponse(BaseModel):
+    success: bool = Field(
+        ..., description="Whether recipes were retrieved successfully"
+    )
+    recipes: List[Recipe] = Field(..., description="List of recipes")
+    count: int = Field(..., description="Number of recipes returned")
+
+
+class GetRecipeResponse(BaseModel):
+    success: bool = Field(..., description="Whether recipe was retrieved successfully")
+    recipe: Recipe = Field(..., description="Recipe data")
+
+
+class DeleteRecipeResponse(BaseModel):
+    success: bool = Field(..., description="Whether recipe was deleted successfully")
+    message: str = Field(..., description="Deletion status message")
+
+
+class UpdateRecipeRequest(BaseModel):
+    recipe: Recipe = Field(..., description="Updated recipe data")
+    source_url: Optional[HttpUrl] = Field(
+        None, description="Updated original video URL"
+    )
+
+
+class UpdateRecipeResponse(BaseModel):
+    success: bool = Field(..., description="Whether recipe was updated successfully")
+    recipe_id: int = Field(..., description="ID of the updated recipe")
+    message: str = Field(..., description="Update status message")

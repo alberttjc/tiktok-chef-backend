@@ -10,11 +10,28 @@ from fastapi.responses import FileResponse
 from src.config import APP_VERSION
 from src.logger import get_logger
 from src.agent import recipe_agent
+from src.database import init_db, get_db
+from src.crud import (
+    create_recipe,
+    get_recipes,
+    get_recipe_by_id,
+    get_recipe_by_source_url,
+    delete_recipe,
+    update_recipe,
+    recipe_to_schema,
+)
 from src.schema import (
     RecipeExtractionRequest,
     RecipeExtractionResponse,
     ErrorResponse,
     HealthResponse,
+    SaveRecipeRequest,
+    SaveRecipeResponse,
+    GetRecipesResponse,
+    GetRecipeResponse,
+    DeleteRecipeResponse,
+    UpdateRecipeRequest,
+    UpdateRecipeResponse,
 )
 
 
@@ -26,6 +43,8 @@ logger = get_logger(__name__)
 async def lifespan(app: FastAPI):
     """Manage application lifecycle"""
     logger.info("Starting TiktokChef API...")
+    # Initialize database
+    init_db()
     yield
     logger.info("Shutting down TiktokChef API...")
 
@@ -74,18 +93,40 @@ async def extract_recipe(request: RecipeExtractionRequest) -> RecipeExtractionRe
     start_time = time.time()
 
     try:
-        # Extract recipe using the agent
+        # Check if recipe already exists in database (caching)
+        db = next(get_db())
+        existing_recipe = get_recipe_by_source_url(db, str(request.video_url))
+
+        if existing_recipe:
+            processing_time = time.time() - start_time
+            logger.info(f"Returning cached recipe for URL: {request.video_url}")
+
+            return RecipeExtractionResponse(
+                success=True,
+                recipe=recipe_to_schema(existing_recipe),
+                metadata={
+                    "steps": 0,
+                    "cached": True,
+                    "database_id": existing_recipe.id,
+                },
+                processing_time=processing_time,
+            )
+
+        # Extract recipe using the agent (new URL)
+        logger.info(f"Extracting new recipe for URL: {request.video_url}")
         result = recipe_agent(
             video_url=str(request.video_url),
             max_retries=request.max_retries,
         )
 
         processing_time = time.time() - start_time
+        metadata = result["metadata"]
+        metadata.update({"cached": False, "database_id": None})
 
         return RecipeExtractionResponse(
             success=result["success"],
             recipe=result["recipe"],
-            metadata=result["metadata"],
+            metadata=metadata,
             processing_time=processing_time,
         )
 
@@ -104,6 +145,184 @@ async def extract_recipe(request: RecipeExtractionRequest) -> RecipeExtractionRe
                     "video_url": str(request.video_url),
                     "original_error": str(e),
                 },
+            ).model_dump(),
+        )
+
+
+# ***************************
+# Database API Endpoints
+# ***************************
+@app.post("/recipes", response_model=SaveRecipeResponse)
+async def save_recipe(request: SaveRecipeRequest):
+    """
+    Save a recipe to the database
+
+    - **recipe**: Recipe data to save
+    - **source_url**: Original video URL (optional)
+    """
+    try:
+        db = next(get_db())
+        db_recipe = create_recipe(
+            db=db,
+            recipe_data=request.recipe,
+            source_url=str(request.source_url) if request.source_url else None,
+        )
+
+        return SaveRecipeResponse(
+            success=True,
+            recipe_id=db_recipe.id,
+            message=f"Recipe '{request.recipe.recipe_overview.title}' saved successfully",
+        )
+
+    except Exception as e:
+        logger.error(f"Error saving recipe: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                error="Failed to save recipe", details={"original_error": str(e)}
+            ).model_dump(),
+        )
+
+
+@app.get("/recipes", response_model=GetRecipesResponse)
+async def get_all_recipes(skip: int = 0, limit: int = 100):
+    """
+    Get all recipes from the database
+
+    - **skip**: Number of recipes to skip (pagination)
+    - **limit**: Maximum number of recipes to return
+    """
+    try:
+        db = next(get_db())
+        db_recipes = get_recipes(db=db, skip=skip, limit=limit)
+
+        # Convert to schemas
+        recipes = [recipe_to_schema(db_recipe) for db_recipe in db_recipes]
+
+        return GetRecipesResponse(success=True, recipes=recipes, count=len(recipes))
+
+    except Exception as e:
+        logger.error(f"Error getting recipes: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                error="Failed to get recipes", details={"original_error": str(e)}
+            ).model_dump(),
+        )
+
+
+@app.get("/recipes/{recipe_id}", response_model=GetRecipeResponse)
+async def get_recipe(recipe_id: int):
+    """
+    Get a single recipe by ID
+
+    - **recipe_id**: ID of the recipe to retrieve
+    """
+    try:
+        db = next(get_db())
+        db_recipe = get_recipe_by_id(db=db, recipe_id=recipe_id)
+
+        if not db_recipe:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=ErrorResponse(
+                    error="Recipe not found", details={"recipe_id": recipe_id}
+                ).model_dump(),
+            )
+
+        recipe = recipe_to_schema(db_recipe)
+
+        return GetRecipeResponse(success=True, recipe=recipe)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting recipe {recipe_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                error="Failed to get recipe", details={"original_error": str(e)}
+            ).model_dump(),
+        )
+
+
+@app.delete("/recipes/{recipe_id}", response_model=DeleteRecipeResponse)
+async def delete_recipe_endpoint(recipe_id: int):
+    """
+    Delete a recipe by ID
+
+    - **recipe_id**: ID of the recipe to delete
+    """
+    try:
+        db = next(get_db())
+        success = delete_recipe(db=db, recipe_id=recipe_id)
+
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=ErrorResponse(
+                    error="Recipe not found", details={"recipe_id": recipe_id}
+                ).model_dump(),
+            )
+
+        return DeleteRecipeResponse(
+            success=True, message=f"Recipe {recipe_id} deleted successfully"
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting recipe {recipe_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                error="Failed to delete recipe", details={"original_error": str(e)}
+            ).model_dump(),
+        )
+
+
+@app.put("/recipes/{recipe_id}", response_model=UpdateRecipeResponse)
+async def update_recipe_endpoint(recipe_id: int, request: UpdateRecipeRequest):
+    """
+    Update a recipe by ID
+
+    - **recipe_id**: ID of the recipe to update
+    - **recipe**: Updated recipe data
+    - **source_url**: Updated original video URL (optional)
+    """
+    try:
+        db = next(get_db())
+        db_recipe = update_recipe(
+            db=db, recipe_id=recipe_id, recipe_data=request.recipe
+        )
+
+        if not db_recipe:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=ErrorResponse(
+                    error="Recipe not found", details={"recipe_id": recipe_id}
+                ).model_dump(),
+            )
+
+        # Update source URL if provided
+        if request.source_url:
+            db_recipe.source_url = str(request.source_url)
+            db.commit()
+
+        return UpdateRecipeResponse(
+            success=True,
+            recipe_id=int(db_recipe.id),
+            message=f"Recipe '{request.recipe.recipe_overview.title}' updated successfully",
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating recipe {recipe_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                error="Failed to update recipe", details={"original_error": str(e)}
             ).model_dump(),
         )
 
