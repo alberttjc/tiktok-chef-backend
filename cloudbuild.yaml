@@ -1,7 +1,4 @@
 steps:
-  - name: "ubuntu"
-    args: ["ls", "-la", "/workspace"]
-    id: "Debug-Files"
   - name: gcr.io/cloud-builders/docker
     args:
       - build
@@ -43,9 +40,8 @@ substitutions:
   _DEPLOY_REGION: australia-southeast2
   _AR_HOSTNAME: australia-southeast2-docker.pkg.dev
   _AR_PROJECT_ID: genai-toolbox-465313
-  _AR_REPOSITORY: tiktok-chef-backend
-  _PLATFORM: managed
-  _SERVICE_NAME: tiktok-chef-image
+  _AR_REPOSITORY: tiktok-chef
+  _SERVICE_NAME: tiktok-chef-backend
   _TRIGGER_ID: a3235169-bda4-42c2-9951-4566cee6a63c
 tags:
   - gcp-cloud-build-deploy-cloud-run
