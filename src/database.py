@@ -1,39 +1,42 @@
 import os
-from sqlalchemy import create_engine, text
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from supabase import create_client, Client
 from src.logger import get_logger
 
 logger = get_logger(__name__)
 
-# Database configuration
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./tiktokchef.db")
+# Supabase configuration
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
-# Create database engine
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {},
-    echo=True,  # Enable SQL logging for development
-)
-
-# Create session factory
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# Create base class for models
-Base = declarative_base()
+# Supabase client singleton
+_supabase_client: Client | None = None
 
 
-def get_db():
-    """Get database session"""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+def get_supabase() -> Client:
+    """Get Supabase client instance"""
+    global _supabase_client
+
+    if _supabase_client is None:
+        if not SUPABASE_URL or not SUPABASE_KEY:
+            raise ValueError(
+                "SUPABASE_URL and SUPABASE_KEY environment variables must be set"
+            )
+
+        _supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
+        logger.info("Supabase client initialized")
+
+    return _supabase_client
 
 
 def init_db():
-    """Initialize database tables"""
-    logger.info("Initializing database...")
-    Base.metadata.create_all(bind=engine)
-    logger.info("Database initialized successfully")
+    """Initialize and verify database connection"""
+    logger.info("Verifying Supabase connection...")
+
+    try:
+        supabase = get_supabase()
+        # Test connection by querying recipes table
+        supabase.table("recipes").select("id", count="exact").limit(1).execute()
+        logger.info("Supabase connection verified successfully")
+    except Exception as e:
+        logger.error(f"Failed to connect to Supabase: {str(e)}")
+        raise

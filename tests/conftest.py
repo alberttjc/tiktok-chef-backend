@@ -5,84 +5,175 @@ Pytest configuration and shared fixtures for TiktokChef API testing
 
 import os
 import sys
-import tempfile
 from typing import Generator, Dict, Any
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from main import app
-from src.database import Base, get_db
-from src.models import Recipe, Ingredient, Instruction
+from src.database import get_supabase
 from src.schema import Recipe, RecipeOverview, Ingredient as SchemaIngredient
 
 
-@pytest.fixture(scope="session")
-def test_db() -> Generator:
-    """
-    Create a temporary database for testing
-    """
-    # Create temporary file for test database
-    db_fd, db_path = tempfile.mkstemp()
+# Mock Supabase client for testing
+class MockSupabaseTable:
+    def __init__(self, table_name: str, data_store: Dict[str, list]):
+        self.table_name = table_name
+        self.data_store = data_store
+        self.query_filters = {}
+        self.query_select = "*"
+        self.query_order = None
+        self.query_range = None
 
-    # Create test database engine
-    test_engine = create_engine(
-        f"sqlite:///{db_path}", connect_args={"check_same_thread": False}
-    )
+    def select(self, columns: str, count: str = None):
+        self.query_select = columns
+        return self
 
-    # Create all tables
-    Base.metadata.create_all(bind=test_engine)
+    def insert(self, data):
+        # Handle both single dict and list of dicts
+        if isinstance(data, dict):
+            data = [data]
 
-    # Create session factory
-    TestingSessionLocal = sessionmaker(
-        autocommit=False, autoflush=False, bind=test_engine
-    )
+        for item in data:
+            # Generate ID if not present
+            if "id" not in item:
+                existing_ids = [row.get("id", 0) for row in self.data_store[self.table_name]]
+                item["id"] = max(existing_ids) + 1 if existing_ids else 1
 
-    # Override the database dependency
-    def override_get_db():
-        try:
-            db = TestingSessionLocal()
-            yield db
-        finally:
-            db.close()
+            self.data_store[self.table_name].append(item)
 
-    app.dependency_overrides[get_db] = override_get_db
+        return self
 
-    yield TestingSessionLocal
+    def update(self, data):
+        self._update_data = data
+        return self
 
-    # Cleanup
-    os.close(db_fd)
-    os.unlink(db_path)
+    def delete(self):
+        self._delete_mode = True
+        return self
+
+    def eq(self, column: str, value):
+        self.query_filters[column] = value
+        return self
+
+    def order(self, column: str, desc: bool = False):
+        self.query_order = (column, desc)
+        return self
+
+    def range(self, start: int, end: int):
+        self.query_range = (start, end)
+        return self
+
+    def limit(self, count: int):
+        self.query_limit = count
+        return self
+
+    def execute(self):
+        # Handle delete
+        if hasattr(self, "_delete_mode"):
+            filtered_data = []
+            deleted_data = []
+            for row in self.data_store[self.table_name]:
+                if all(row.get(k) == v for k, v in self.query_filters.items()):
+                    deleted_data.append(row)
+                else:
+                    filtered_data.append(row)
+            self.data_store[self.table_name] = filtered_data
+            return type("Response", (), {"data": deleted_data})()
+
+        # Handle update
+        if hasattr(self, "_update_data"):
+            for row in self.data_store[self.table_name]:
+                if all(row.get(k) == v for k, v in self.query_filters.items()):
+                    row.update(self._update_data)
+            return type("Response", (), {"data": []})()
+
+        # Handle select
+        result = list(self.data_store[self.table_name])
+
+        # Apply filters
+        if self.query_filters:
+            result = [
+                row
+                for row in result
+                if all(row.get(k) == v for k, v in self.query_filters.items())
+            ]
+
+        # Join related data if select includes nested tables
+        if "*" in self.query_select and "(" in self.query_select:
+            for row in result:
+                # Add ingredients
+                if "ingredients" in self.query_select:
+                    row["ingredients"] = [
+                        ing
+                        for ing in self.data_store.get("ingredients", [])
+                        if ing.get("recipe_id") == row.get("id")
+                    ]
+                # Add instructions
+                if "instructions" in self.query_select:
+                    row["instructions"] = [
+                        inst
+                        for inst in self.data_store.get("instructions", [])
+                        if inst.get("recipe_id") == row.get("id")
+                    ]
+
+        # Apply ordering
+        if self.query_order:
+            column, desc = self.query_order
+            result = sorted(result, key=lambda x: x.get(column, ""), reverse=desc)
+
+        # Apply range
+        if self.query_range:
+            start, end = self.query_range
+            result = result[start : end + 1]
+
+        return type("Response", (), {"data": result})()
+
+
+class MockSupabaseClient:
+    def __init__(self):
+        self.data_store = {"recipes": [], "ingredients": [], "instructions": []}
+
+    def table(self, table_name: str):
+        return MockSupabaseTable(table_name, self.data_store)
 
 
 @pytest.fixture
-def db_session(test_db):
-    """
-    Get a database session for testing
-    """
-    db = test_db()
-    try:
-        yield db
-    finally:
-        # Clean up database after each test
-        db.query(Instruction).delete()
-        db.query(Ingredient).delete()
-        # Equipment is not stored in database (schema-only for MVP)
-        db.query(Recipe).delete()
-        db.commit()
-        db.close()
+def mock_supabase():
+    """Create a mock Supabase client for testing"""
+    return MockSupabaseClient()
 
 
 @pytest.fixture
-def client(test_db) -> Generator:
+def supabase_client(mock_supabase):
     """
-    Create a test client with the test database
+    Override get_supabase dependency with mock client
+    """
+
+    def override_get_supabase():
+        return mock_supabase
+
+    app.dependency_overrides[get_supabase] = override_get_supabase
+
+    yield mock_supabase
+
+    # Cleanup data after each test
+    mock_supabase.data_store["instructions"] = []
+    mock_supabase.data_store["ingredients"] = []
+    mock_supabase.data_store["recipes"] = []
+
+    # Clear overrides
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def client(supabase_client) -> Generator:
+    """
+    Create a test client with the mock Supabase database
     """
     with TestClient(app) as test_client:
         yield test_client
@@ -220,24 +311,28 @@ class TestDatabaseSetup:
     """Test database setup and fixtures"""
 
     @pytest.mark.database
-    def test_database_initialization(self, db_session):
-        """Test that database tables are created properly"""
-        # Check that we can create a recipe
-        recipe = Recipe(
-            title="Test Recipe",
-            base_servings=2,
-            prep_time="10 mins",
-            cook_time="20 mins",
+    def test_database_initialization(self, supabase_client):
+        """Test that mock database works properly"""
+        # Insert a recipe
+        response = (
+            supabase_client.table("recipes")
+            .insert(
+                {
+                    "title": "Test Recipe",
+                    "base_servings": 2,
+                    "prep_time": "10 mins",
+                    "cook_time": "20 mins",
+                }
+            )
+            .execute()
         )
-        db_session.add(recipe)
-        db_session.commit()
 
         # Verify it was saved
         retrieved = (
-            db_session.query(Recipe).filter(Recipe.title == "Test Recipe").first()
+            supabase_client.table("recipes").select("*").eq("title", "Test Recipe").execute()
         )
-        assert retrieved is not None
-        assert retrieved.title == "Test Recipe"
+        assert len(retrieved.data) > 0
+        assert retrieved.data[0]["title"] == "Test Recipe"
 
 
 # Utility functions for testing

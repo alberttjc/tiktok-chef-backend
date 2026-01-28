@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse
 from src.config import APP_VERSION
 from src.logger import get_logger
 from src.agent import recipe_agent
-from src.database import init_db, get_db
+from src.database import init_db, get_supabase
 from src.crud import (
     create_recipe,
     get_recipes,
@@ -94,8 +94,8 @@ async def extract_recipe(request: RecipeExtractionRequest) -> RecipeExtractionRe
 
     try:
         # Check if recipe already exists in database (caching)
-        db = next(get_db())
-        existing_recipe = get_recipe_by_source_url(db, str(request.video_url))
+        supabase = get_supabase()
+        existing_recipe = get_recipe_by_source_url(supabase, str(request.video_url))
 
         if existing_recipe:
             processing_time = time.time() - start_time
@@ -107,7 +107,7 @@ async def extract_recipe(request: RecipeExtractionRequest) -> RecipeExtractionRe
                 metadata={
                     "steps": 0,
                     "cached": True,
-                    "database_id": existing_recipe.id,
+                    "database_id": existing_recipe["id"],
                 },
                 processing_time=processing_time,
             )
@@ -161,16 +161,16 @@ async def save_recipe(request: SaveRecipeRequest):
     - **source_url**: Original video URL (optional)
     """
     try:
-        db = next(get_db())
+        supabase = get_supabase()
         db_recipe = create_recipe(
-            db=db,
+            supabase=supabase,
             recipe_data=request.recipe,
             source_url=str(request.source_url) if request.source_url else None,
         )
 
         return SaveRecipeResponse(
             success=True,
-            recipe_id=db_recipe.id,
+            recipe_id=db_recipe["id"],
             message=f"Recipe '{request.recipe.recipe_overview.title}' saved successfully",
         )
 
@@ -193,8 +193,8 @@ async def get_all_recipes(skip: int = 0, limit: int = 100):
     - **limit**: Maximum number of recipes to return
     """
     try:
-        db = next(get_db())
-        db_recipes = get_recipes(db=db, skip=skip, limit=limit)
+        supabase = get_supabase()
+        db_recipes = get_recipes(supabase=supabase, skip=skip, limit=limit)
 
         # Convert to schemas
         recipes = [recipe_to_schema(db_recipe) for db_recipe in db_recipes]
@@ -219,8 +219,8 @@ async def get_recipe(recipe_id: int):
     - **recipe_id**: ID of the recipe to retrieve
     """
     try:
-        db = next(get_db())
-        db_recipe = get_recipe_by_id(db=db, recipe_id=recipe_id)
+        supabase = get_supabase()
+        db_recipe = get_recipe_by_id(supabase=supabase, recipe_id=recipe_id)
 
         if not db_recipe:
             raise HTTPException(
@@ -254,8 +254,8 @@ async def delete_recipe_endpoint(recipe_id: int):
     - **recipe_id**: ID of the recipe to delete
     """
     try:
-        db = next(get_db())
-        success = delete_recipe(db=db, recipe_id=recipe_id)
+        supabase = get_supabase()
+        success = delete_recipe(supabase=supabase, recipe_id=recipe_id)
 
         if not success:
             raise HTTPException(
@@ -291,9 +291,9 @@ async def update_recipe_endpoint(recipe_id: int, request: UpdateRecipeRequest):
     - **source_url**: Updated original video URL (optional)
     """
     try:
-        db = next(get_db())
+        supabase = get_supabase()
         db_recipe = update_recipe(
-            db=db, recipe_id=recipe_id, recipe_data=request.recipe
+            supabase=supabase, recipe_id=recipe_id, recipe_data=request.recipe
         )
 
         if not db_recipe:
@@ -306,12 +306,13 @@ async def update_recipe_endpoint(recipe_id: int, request: UpdateRecipeRequest):
 
         # Update source URL if provided
         if request.source_url:
-            db_recipe.source_url = str(request.source_url)
-            db.commit()
+            supabase.table("recipes").update(
+                {"source_url": str(request.source_url)}
+            ).eq("id", recipe_id).execute()
 
         return UpdateRecipeResponse(
             success=True,
-            recipe_id=int(db_recipe.id),
+            recipe_id=int(db_recipe["id"]),
             message=f"Recipe '{request.recipe.recipe_overview.title}' updated successfully",
         )
 
