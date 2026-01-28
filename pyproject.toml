@@ -1,5 +1,5 @@
 [project]
-name = "recipe-app"
+name = "tiktok-chef-backend"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -14,4 +14,13 @@ dependencies = [
     "python-dotenv>=1.2.1",
     "sqlalchemy>=2.0.0",
     "alembic>=1.13.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "httpx>=0.24.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.11.0",
 ]
