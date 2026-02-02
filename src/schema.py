@@ -41,7 +41,6 @@ class Recipe(BaseModel):
     recipe_overview: RecipeOverview
     ingredients: List[Ingredient]
     instructions: List[str]
-    equipment: Optional[List[str]] = None
 
 
 # ***************************

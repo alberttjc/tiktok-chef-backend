@@ -259,8 +259,7 @@ def recipe_to_schema(db_recipe: Dict[str, Any]) -> RecipeSchema:
             cuisine_type=db_recipe.get("cuisine_type"),
         ),
         ingredients=ingredients,
-        instructions=[instr["instruction_text"] for instr in sorted_instructions],
-        equipment=None,  # Not stored in database for MVP
+        instructions=[instr["instruction_text"] for instr in sorted_instructions]
     )
 
     # Add ID to top-level for easier frontend access

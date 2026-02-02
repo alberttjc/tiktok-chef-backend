@@ -190,8 +190,7 @@ curl -X PUT "http://localhost:8000/recipes/1" \
     "instructions": [
       "Boil water in a large pot",
       "Add pasta and cook according to package directions"
-    ],
-    "equipment": ["Large pot", "Colander"]
+    ]
   },
   "metadata": {
     "steps": 2,

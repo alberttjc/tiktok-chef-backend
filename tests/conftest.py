@@ -210,8 +210,7 @@ def sample_recipe_data() -> Dict[str, Any]:
                 "Heat tomato sauce in a pan",
                 "Combine pasta with sauce",
                 "Top with cheese and serve",
-            ],
-            "equipment": ["Pot", "Pan", "Strainer"],
+            ]
         },
         "source_url": "https://example.com/video/123",
     }
@@ -243,8 +242,7 @@ def sample_recipe_update_data() -> Dict[str, Any]:
                 "Add chicken to tortillas",
                 "Top with cheese",
                 "Roll into burritos",
-            ],
-            "equipment": ["Skillet", "Cutting board"],
+            ]
         },
         "source_url": "https://example-updated.com/video/456",
     }
@@ -280,8 +278,7 @@ def mock_video_extraction():
                 {"item": "Rice", "amount": "1", "unit": "cup"},
                 {"item": "Soy Sauce", "amount": "2", "unit": "tablespoons"},
             ],
-            "instructions": ["Cook rice", "Add soy sauce", "Serve hot"],
-            "equipment": ["Pot", "Stove"],
+            "instructions": ["Cook rice", "Add soy sauce", "Serve hot"]
         },
         "metadata": {"steps": 3, "processing_time": 5.0},
     }
