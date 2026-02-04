@@ -6,6 +6,7 @@ CREATE TABLE recipes (
     id BIGSERIAL PRIMARY KEY,
     title VARCHAR NOT NULL,
     source_url VARCHAR,
+    creator_username VARCHAR,
     thumbnail_url VARCHAR,
     base_servings INTEGER NOT NULL DEFAULT 4,
     prep_time VARCHAR,
@@ -18,6 +19,9 @@ CREATE TABLE recipes (
 
 -- Create index on source_url for caching lookups
 CREATE INDEX idx_recipes_source_url ON recipes(source_url);
+
+-- Create index on creator_username for filtering by creator
+CREATE INDEX idx_recipes_creator_username ON recipes(creator_username);
 
 -- ingredients table (child of recipes)
 CREATE TABLE ingredients (

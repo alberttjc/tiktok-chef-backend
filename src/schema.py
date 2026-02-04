@@ -22,6 +22,8 @@ class STATUS(str, Enum):
 class RecipeOverview(BaseModel):
     id: Optional[int] = None
     title: str
+    source_url: Optional[str] = None
+    creator_username: Optional[str] = None
     prep_time: Optional[str] = None
     cook_time: Optional[str] = None
     servings: int
@@ -109,6 +111,7 @@ class HealthResponse(BaseModel):
 class SaveRecipeRequest(BaseModel):
     recipe: Recipe = Field(..., description="Recipe data to save")
     source_url: Optional[HttpUrl] = Field(None, description="Original video URL")
+    creator_username: Optional[str] = Field(None, description="TikTok creator username")
 
 
 class SaveRecipeResponse(BaseModel):
@@ -140,6 +143,7 @@ class UpdateRecipeRequest(BaseModel):
     source_url: Optional[HttpUrl] = Field(
         None, description="Updated original video URL"
     )
+    creator_username: Optional[str] = Field(None, description="TikTok creator username")
 
 
 class UpdateRecipeResponse(BaseModel):

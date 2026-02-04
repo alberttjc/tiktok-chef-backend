@@ -7,9 +7,7 @@ from src.logger import get_logger
 logger = get_logger(__name__)
 
 
-def create_recipe(
-    supabase: Client, recipe_data: RecipeSchema, source_url: Optional[str] = None
-) -> Dict[str, Any]:
+def create_recipe(supabase: Client, recipe_data: RecipeSchema) -> Dict[str, Any]:
     """Create a new recipe with ingredients and instructions"""
     logger.info(f"Creating recipe: {recipe_data.recipe_overview.title}")
 
@@ -17,7 +15,8 @@ def create_recipe(
         # Create recipe record
         recipe_dict = {
             "title": recipe_data.recipe_overview.title,
-            "source_url": source_url,
+            "source_url": recipe_data.recipe_overview.source_url,
+            "creator_username": recipe_data.recipe_overview.creator_username,
             "base_servings": recipe_data.recipe_overview.servings,
             "prep_time": recipe_data.recipe_overview.prep_time,
             "cook_time": recipe_data.recipe_overview.cook_time,
@@ -252,6 +251,8 @@ def recipe_to_schema(db_recipe: Dict[str, Any]) -> RecipeSchema:
         recipe_overview=RecipeOverview(
             id=recipe_id,
             title=db_recipe.get("title", ""),
+            source_url=db_recipe.get("source_url"),
+            creator_username=db_recipe.get("creator_username"),
             prep_time=db_recipe.get("prep_time"),
             cook_time=db_recipe.get("cook_time"),
             servings=db_recipe.get("base_servings", 1),

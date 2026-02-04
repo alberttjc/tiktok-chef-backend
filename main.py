@@ -20,6 +20,7 @@ from src.crud import (
     update_recipe,
     recipe_to_schema,
 )
+from src.utils import extract_tiktok_username
 from src.schema import (
     RecipeExtractionRequest,
     RecipeExtractionResponse,
@@ -123,6 +124,12 @@ async def extract_recipe(request: RecipeExtractionRequest) -> RecipeExtractionRe
         metadata = result["metadata"]
         metadata.update({"cached": False, "database_id": None})
 
+        # Extract creator username from TikTok URL
+        creator_username = extract_tiktok_username(str(request.video_url))
+        if creator_username and result["recipe"]:
+            result["recipe"].recipe_overview.creator_username = creator_username
+            result["recipe"].recipe_overview.source_url = str(request.video_url)
+
         return RecipeExtractionResponse(
             success=result["success"],
             recipe=result["recipe"],
@@ -159,14 +166,11 @@ async def save_recipe(request: SaveRecipeRequest):
 
     - **recipe**: Recipe data to save
     - **source_url**: Original video URL (optional)
+    - **creator_username**: TikTok creator username (optional)
     """
     try:
         supabase = get_supabase()
-        db_recipe = create_recipe(
-            supabase=supabase,
-            recipe_data=request.recipe,
-            source_url=str(request.source_url) if request.source_url else None,
-        )
+        db_recipe = create_recipe(supabase=supabase,recipe_data=request.recipe)
 
         return SaveRecipeResponse(
             success=True,
@@ -304,11 +308,15 @@ async def update_recipe_endpoint(recipe_id: int, request: UpdateRecipeRequest):
                 ).model_dump(),
             )
 
-        # Update source URL if provided
-        if request.source_url:
-            supabase.table("recipes").update(
-                {"source_url": str(request.source_url)}
-            ).eq("id", recipe_id).execute()
+        # Update source URL and creator username if provided
+        if request.source_url or request.creator_username:
+            update_data = {}
+            if request.source_url:
+                update_data["source_url"] = str(request.source_url)
+            if request.creator_username:
+                update_data["creator_username"] = request.creator_username
+
+            supabase.table("recipes").update(update_data).eq("id", recipe_id).execute()
 
         return UpdateRecipeResponse(
             success=True,
