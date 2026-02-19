@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 Test script for the TiktokChef API
+Uses mock database to avoid touching production data
 """
 
 import sys
@@ -8,13 +9,13 @@ import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import pytest
 from fastapi.testclient import TestClient
-from main import app
 
 
-def test_api():
-    """Test the FastAPI endpoints"""
-    client = TestClient(app)
+@pytest.mark.api
+def test_api(client: TestClient):
+    """Test the FastAPI endpoints using mock database"""
 
     print("Testing TiktokChef API...")
     print("=" * 50)
@@ -52,6 +53,3 @@ def test_api():
 
     print("✅ API tests completed!")
 
-
-if __name__ == "__main__":
-    test_api()
