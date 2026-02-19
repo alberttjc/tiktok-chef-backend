@@ -30,3 +30,9 @@ uv.lock
 *.db
 *.sqlite
 *.sqlite3
+
+# Test files
+.coverage
+coverage.xml
+html/*
+

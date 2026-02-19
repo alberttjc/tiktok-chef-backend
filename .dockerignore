@@ -1,0 +1,38 @@
+# Secrets — must never be in image
+.env
+
+# Version control
+.git/
+.gitignore
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.py[cod]
+
+# Virtual environment (uv sync creates a fresh one in the image)
+.venv/
+
+# Test artifacts
+tests/
+.coverage
+coverage.xml
+htmlcov/
+pytest.ini
+.pytest_cache/
+
+# Dev tooling
+.vscode/
+.devcontainer/
+.claude/
+
+# Docs and scripts (not needed at runtime)
+docs/
+README.md
+validation/
+scripts/
+
+# macOS
+.DS_Store
