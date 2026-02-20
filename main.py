@@ -7,9 +7,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 # Import local modules
-from src.config import APP_VERSION
+from src.config import get_settings
 from src.logger import get_logger
-from src.agent import recipe_agent
+from src.agent import RecipeAgent
 from src.database import init_db, get_supabase
 from src.crud import (
     create_recipe,
@@ -54,14 +54,14 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="TiktokChef API",
     description="Extract structured recipes from cooking videos using AI",
-    version=APP_VERSION,
+    version=get_settings().app_version,
     lifespan=lifespan,
 )
 
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=get_settings().allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -115,25 +115,20 @@ async def extract_recipe(request: RecipeExtractionRequest) -> RecipeExtractionRe
 
         # Extract recipe using the agent (new URL)
         logger.info(f"Extracting new recipe for URL: {request.video_url}")
-        result = recipe_agent(
-            video_url=str(request.video_url),
-            max_retries=request.max_retries,
-        )
+        recipe = RecipeAgent().transcribe_recipe(str(request.video_url))
 
         processing_time = time.time() - start_time
-        metadata = result["metadata"]
-        metadata.update({"cached": False, "database_id": None})
 
         # Extract creator username from TikTok URL
         creator_username = extract_tiktok_username(str(request.video_url))
-        if creator_username and result["recipe"]:
-            result["recipe"].recipe_overview.creator_username = creator_username
-            result["recipe"].recipe_overview.source_url = str(request.video_url)
+        if creator_username:
+            recipe.recipe_overview.creator_username = creator_username
+            recipe.recipe_overview.source_url = str(request.video_url)
 
         return RecipeExtractionResponse(
-            success=result["success"],
-            recipe=result["recipe"],
-            metadata=metadata,
+            success=True,
+            recipe=recipe,
+            metadata={"cached": False, "database_id": None},
             processing_time=processing_time,
         )
 
@@ -170,7 +165,11 @@ async def save_recipe(request: SaveRecipeRequest):
     """
     try:
         supabase = get_supabase()
-        db_recipe = create_recipe(supabase=supabase,recipe_data=request.recipe)
+        if request.source_url:
+            request.recipe.recipe_overview.source_url = str(request.source_url)
+        if request.creator_username:
+            request.recipe.recipe_overview.creator_username = request.creator_username
+        db_recipe = create_recipe(supabase=supabase, recipe_data=request.recipe)
 
         return SaveRecipeResponse(
             success=True,

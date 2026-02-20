@@ -1,19 +1,6 @@
-from enum import Enum
 from pydantic import BaseModel, Field, HttpUrl
-from typing import Annotated, Sequence, Optional, Literal, List, Any, Dict
-from langchain_core.messages import BaseMessage
-from langgraph.graph.message import add_messages
-from src.config import APP_VERSION
-
-
-# ***************************
-# Enum Status
-# ***************************
-class STATUS(str, Enum):
-    PENDING = "pending"
-    RUNNING = "running"
-    FAILED = "failed"
-    SUCCESS = "success"
+from typing import Optional, Literal, List, Any, Dict
+from src.config import get_settings
 
 
 # ***************************
@@ -43,30 +30,6 @@ class Recipe(BaseModel):
     recipe_overview: RecipeOverview
     ingredients: List[Ingredient]
     instructions: List[str]
-
-
-# ***************************
-# Agent Data Schema
-# ***************************
-class AgentState(BaseModel):
-    # Core messaging
-    messages: Annotated[Sequence[BaseMessage], add_messages] = Field(
-        default_factory=list
-    )
-
-    # Recipe extraction state
-    video_url: Optional[str] = None
-    extracted_recipe: Optional[Recipe] = None
-    extraction_status: STATUS = Field(default=STATUS.PENDING)
-
-    # Error handling
-    error_message: Optional[str] = None
-    retry_count: int = Field(default=0, ge=0)
-    max_retries: int = Field(default=2, ge=0, le=5)
-
-    # Processing metadata
-    number_of_steps: int = Field(default=0, ge=0)
-    processing_time: Optional[float] = 0
 
 
 # ***************************
@@ -102,7 +65,7 @@ class ErrorResponse(BaseModel):
 
 class HealthResponse(BaseModel):
     status: str = Field(default="healthy", description="API health status")
-    version: str = Field(default=APP_VERSION, description="API version")
+    version: str = Field(default_factory=lambda: get_settings().app_version, description="API version")
 
 
 # ***************************
