@@ -1,6 +1,8 @@
 import os
+import re
 import tempfile
 import subprocess
+from typing import Optional
 
 # import local modules
 from src.logger import get_logger
@@ -53,3 +55,41 @@ def download_tiktok_video(video_url: str) -> str:
     except Exception as e:
         logger.error(f"Error downloading video: {str(e)}")
         raise RuntimeError(f"Error downloading video: {str(e)}")
+
+
+# ***************************
+# TikTok URL Utilities
+# ***************************
+def extract_tiktok_username(url: str) -> Optional[str]:
+    """
+    Extract TikTok username from various TikTok URL formats.
+
+    Supported formats:
+    - https://www.tiktok.com/@username/video/123456789
+    - https://tiktok.com/@username/video/123456789
+    - https://vm.tiktok.com/ZMxxx/ (short URL - cannot extract username)
+    - https://www.tiktok.com/@username
+
+    Returns:
+        Username without @ prefix, or None if not found
+    """
+    if not url:
+        return None
+
+    try:
+        match = re.search(r"/@([a-zA-Z0-9._]+)", url)
+        return match.group(1) if match else None
+    except Exception:
+        return None
+
+
+def format_tiktok_username(username: Optional[str]) -> Optional[str]:
+    """
+    Format username to ensure it has @ prefix for display.
+
+    Returns:
+        Username with @ prefix, or None if input is None
+    """
+    if not username:
+        return None
+    return username if username.startswith("@") else f"@{username}"

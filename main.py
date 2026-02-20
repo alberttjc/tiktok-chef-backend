@@ -20,7 +20,7 @@ from src.crud import (
     update_recipe,
     recipe_to_schema,
 )
-from src.utils import extract_tiktok_username
+from src.tools import extract_tiktok_username
 from src.schema import (
     RecipeExtractionRequest,
     RecipeExtractionResponse,
