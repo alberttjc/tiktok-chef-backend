@@ -1,12 +1,8 @@
-import os
 from supabase import create_client, Client
+from src.config import get_settings
 from src.logger import get_logger
 
 logger = get_logger(__name__)
-
-# Supabase configuration
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 # Supabase client singleton
 _supabase_client: Client | None = None
@@ -17,12 +13,8 @@ def get_supabase() -> Client:
     global _supabase_client
 
     if _supabase_client is None:
-        if not SUPABASE_URL or not SUPABASE_KEY:
-            raise ValueError(
-                "SUPABASE_URL and SUPABASE_KEY environment variables must be set"
-            )
-
-        _supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
+        settings = get_settings()
+        _supabase_client = create_client(settings.supabase_url, settings.supabase_key)
         logger.info("Supabase client initialized")
 
     return _supabase_client
